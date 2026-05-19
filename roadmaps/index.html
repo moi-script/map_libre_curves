@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+
+    <!-- MapLibre CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" />
+    <!-- MapLibre JS -->
+    <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* The map container MUST have a defined height, or it will be invisible */
+        #map {
+            height: 100vh;
+            width: 100vw;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="map"></div>
+    <script src="script.js"></script>
+
+    <button id="zoom-btn"
+        style="position: absolute; top: 10px; left: 10px; z-index: 1000; padding: 10px; cursor: pointer;">
+        Zoom to Triangle
+    </button>
+</body>
+
+</html>
