@@ -1,5 +1,4 @@
 // initialize the map  :
-const general_trias_lat_long = [120.8872, 14.3828]
 
 // normal map 
 const map = new maplibregl.Map({
@@ -62,15 +61,7 @@ function addMyMarker() {
         .setLngLat([120.8872, 14.3828])
         .addTo(map);
 }
-function findMebutton() {
 
-    const geolocate = new maplibregl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true // If true, the map follows the user as they move
-    });
-    map.addControl(geolocate, 'top-right');
-
-}
 function scaleValueZoom() {
 
     const scale = new maplibregl.ScaleControl({
@@ -80,6 +71,9 @@ function scaleValueZoom() {
     map.addControl(scale, 'bottom-left');
 
 }
+
+
+
 function addTerrainButton() {
     // We add the button to toggle 3D terrain
     const terrainControl = new maplibregl.TerrainControl({
@@ -182,17 +176,20 @@ function addGlobeSetUp() {
             tileSize: 256
         });
 
+
         // 2. Set the 3D Terrain
         // This connects the source we just made to the map's actual 3D engine
         map.setTerrain({
             source: 'my-elevation-data',
-            exaggeration: 1.5 // Makes hills look 1.5x taller
+            exaggeration: 5 // Makes hills look 1.5x taller
         });
 
         drawPolygon(map)
         cameraButton()
+        // addVideoOverlay(map)
 
         // clickablePoly(map)
+        // add3DBuildings(map)
 
     });
 }
@@ -228,9 +225,90 @@ function cameraButton() {
     });
 }
 
+function lockButton() {
+    const lockBtn = document.getElementById('lock-btn');
+    let isLocked = false;
+
+    lockBtn.addEventListener('click', () => {
+        if (!isLocked) {
+            // 1. Disable panning (clicking and dragging)
+            map.dragPan.disable();
+
+            // 2. Disable zooming with the mouse wheel
+            map.scrollZoom.disable();
+
+            // 3. Disable double-click to zoom
+            map.doubleClickZoom.disable();
+
+            // 4. Disable keyboard arrows for panning
+            map.keyboard.disable();
+
+            lockBtn.innerText = "Unlock Map Movement";
+            isLocked = true;
+        } else {
+            // Turn everything back on
+            map.dragPan.enable();
+            map.scrollZoom.enable();
+            map.doubleClickZoom.enable();
+            map.keyboard.enable();
+
+            lockBtn.innerText = "Lock Map Movement";
+            isLocked = false;
+        }
+    });
+}
+
+function addVideoOverlay(map) {
+    // 1. Add the Video Source
+    map.addSource('drone-video', {
+        type: 'video',
+        urls: [
+            'https://static-assets.mapbox.com/mapbox-gl-js/drone.mp4',
+            'https://static-assets.mapbox.com/mapbox-gl-js/drone.webm'
+        ],
+        coordinates: [
+            [120.88, 14.39], // Top Left
+            [120.89, 14.39], // Top Right
+            [120.89, 14.38], // Bottom Right
+            [120.88, 14.38]  // Bottom Left
+        ]
+    });
+
+    // 2. Add a Raster Layer to show the video
+    map.addLayer({
+        id: 'video-layer',
+        type: 'raster',
+        source: 'drone-video'
+    });
+}
+function add3DBuildings(map) {
+    // We add a new layer that specifically looks for the 'building' data
+    // inside the OpenFreeMap vector tiles we are already loading.
+    map.addLayer({
+        'id': '3d-buildings',
+        'source': 'openfreemap',      // The underlying data source used by your style
+        'source-layer': 'building',   // We ONLY want to grab the building data
+        'type': 'fill-extrusion',     // This is the magic word that turns 2D into 3D
+        'minzoom': 15,                // Only show 3D buildings when zoomed in close
+        'paint': {
+            'fill-extrusion-color': '#d3d3d3', // Light gray color for the buildings
+            
+            // This reads the actual height of the building from the database!
+            'fill-extrusion-height': ['get', 'render_height'],
+            
+            // This reads the minimum height (useful for buildings with archways)
+            'fill-extrusion-base': ['get', 'render_min_height'],
+            
+            'fill-extrusion-opacity': 0.8 // Make them slightly transparent
+        }
+    });
+}
 addMyMarker();
 controlZoomCompass();
 findMebutton();
 scaleValueZoom();
 addTerrainButton();
-addGlobeSetUp()
+addGlobeSetUp();
+lockButton();
+
+

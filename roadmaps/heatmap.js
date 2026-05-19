@@ -1,0 +1,220 @@
+
+const general_trias_lat_long = [120.8872, 14.3828]
+
+
+const map = new maplibregl.Map({
+    container: 'map',
+    maxPitch: 95,
+    center: general_trias_lat_long,
+    zoom: 30,
+    bearing: 57,
+    pitch: 71,
+    hash: true
+});
+
+map.setStyle('https://tiles.openfreemap.org/styles/liberty', {
+    transformStyle: (previousStyle, nextStyle) => {
+        nextStyle.projection = { type: 'globe' };
+        nextStyle.sources = {
+            ...nextStyle.sources, terrainSource: {
+                type: 'raster-dem',
+                url: 'https://tiles.mapterhorn.com/tilejson.json'
+            },
+            hillshadeSource: {
+                type: 'raster-dem',
+                url: 'https://tiles.mapterhorn.com/tilejson.json'
+            }
+        }
+        nextStyle.terrain = {
+            source: 'terrainSource',
+            exaggeration: 1
+        }
+
+        nextStyle.sky = {
+            'atmosphere-blend': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                0, 1,
+                2, 0
+            ],
+        }
+
+        nextStyle.layers.push({
+            id: 'hills',
+            type: 'hillshade',
+            source: 'hillshadeSource',
+            layout: { visibility: 'visible' },
+            paint: { 'hillshade-shadow-color': '#473B24' }
+        })
+
+        return nextStyle
+    }
+})
+
+map.addControl(
+    new maplibregl.NavigationControl({
+        visualizePitch: true,
+        showZoom: true,
+        showCompass: true
+    })
+);
+
+
+map.addControl(
+    new maplibregl.GlobeControl()
+);
+
+map.addControl(
+    new maplibregl.TerrainControl({
+        source: 'terrainSource',
+        exaggeration: 1
+    })
+);
+
+
+function findMebutton() {
+
+    const geolocate = new maplibregl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true // If true, the map follows the user as they move
+    });
+    map.addControl(geolocate, 'top-right');
+
+}
+
+
+findMebutton(map)
+
+map.on('load', () => {
+    // Add a geojson point source.
+    // Heatmap layers also work with a vector tile source.
+    map.addSource('earthquakes', {
+        'type': 'geojson',
+        'data':
+            'https://maplibre.org/maplibre-gl-js/docs/assets/earthquakes.geojson'
+    });
+
+    map.addLayer(
+        {
+            'id': 'earthquakes-heat',
+            'type': 'heatmap',
+            'source': 'earthquakes',
+            'maxzoom': 9,
+            'paint': {
+                // Increase the heatmap weight based on frequency and property magnitude
+                'heatmap-weight': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'mag'],
+                    0,
+                    0,
+                    6,
+                    1
+                ],
+                // Increase the heatmap color weight weight by zoom level
+                // heatmap-intensity is a multiplier on top of heatmap-weight
+                'heatmap-intensity': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    0,
+                    1,
+                    9,
+                    3
+                ],
+                // Color ramp for heatmap.  Domain is 0 (low) to 1 (high).
+                // Begin color ramp at 0-stop with a 0-transparency color
+                // to create a blur-like effect.
+                'heatmap-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['heatmap-density'],
+                    0,
+                    'rgba(33,102,172,0)',
+                    0.2,
+                    'rgb(103,169,207)',
+                    0.4,
+                    'rgb(209,229,240)',
+                    0.6,
+                    'rgb(253,219,199)',
+                    0.8,
+                    'rgb(239,138,98)',
+                    1,
+                    'rgb(178,24,43)'
+                ],
+                // Adjust the heatmap radius by zoom level
+                'heatmap-radius': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    0,
+                    2,
+                    9,
+                    20
+                ],
+                // Transition from heatmap to circle layer by zoom level
+                'heatmap-opacity': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    7,
+                    1,
+                    9,
+                    0
+                ]
+            }
+        }
+    );
+
+
+    map.addLayer(
+        {
+            'id': 'earthquakes-point',
+            'type': 'circle',
+            'source': 'earthquakes',
+            'minzoom': 7,
+            'paint': {
+                // Size circle radius by earthquake magnitude and zoom level
+                'circle-radius': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    7,
+                    ['interpolate', ['linear'], ['get', 'mag'], 1, 1, 6, 4],
+                    16,
+                    ['interpolate', ['linear'], ['get', 'mag'], 1, 5, 6, 50]
+                ],
+                'circle-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'mag'],
+                    1,
+                    'rgba(33,102,172,0)',
+                    2,
+                    'rgb(103,169,207)',
+                    3,
+                    'rgb(209,229,240)',
+                    4,
+                    'rgb(253,219,199)',
+                    5,
+                    'rgb(239,138,98)',
+                    6,
+                    'rgb(178,24,43)'
+                ],
+                'circle-stroke-color': 'white',
+                'circle-stroke-width': 1,
+                // Transition from heatmap to circle layer by zoom level
+                'circle-opacity': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    7,
+                    0,
+                    8,
+                    1
+                ]
+            }
+        }
+    );
+});
